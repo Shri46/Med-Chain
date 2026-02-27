@@ -58,6 +58,13 @@ export const UploadRecord = ({ onUploadSuccess }) => {
             keys[cid] = exportedKey;
             localStorage.setItem('medchain_keys', JSON.stringify(keys));
 
+            // Sync with Mock Key Server to allow Doctor access across browser instances in testing
+            try {
+                await fetch('/api/keys', { method: 'POST', body: JSON.stringify({ [cid]: exportedKey }) });
+            } catch (e) {
+                console.error('Mock server sync failed', e);
+            }
+
             // 6. Smart Contract Transaction
             showToast('Confirm transaction in MetaMask...', 'loading');
             const success = await storeCID(cid, file.name, file.type);

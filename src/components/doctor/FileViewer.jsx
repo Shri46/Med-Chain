@@ -26,11 +26,23 @@ export const FileViewer = ({ record, isOpen, onClose }) => {
                 const encryptedFileBuffer = await fetchFromIPFS(record.cid);
 
                 // 2. Retrieve Decryption Key
-                // DEMO LIMITATION: We look for the key in localStorage. 
+                // DEMO LIMITATION: We look for the key in localStorage or the mock server. 
                 // In a real app, the doctor would request the key from the patient via a secure channel (e.g. diffie-hellman),
                 // or the key would be re-encrypted for the doctor's public key and stored on IPFS.
                 const keys = JSON.parse(localStorage.getItem('medchain_keys') || '{}');
-                const base64Key = keys[record.cid];
+                let base64Key = keys[record.cid];
+
+                if (!base64Key) {
+                    try {
+                        const res = await fetch('/api/keys');
+                        const serverKeys = await res.json();
+                        base64Key = serverKeys[record.cid];
+                        if (base64Key) {
+                            keys[record.cid] = base64Key;
+                            localStorage.setItem('medchain_keys', JSON.stringify(keys));
+                        }
+                    } catch (e) { console.error('Error fetching key from server', e); }
+                }
 
                 if (!base64Key) {
                     throw new Error('Decryption key not found. Ensure the patient has shared the key (Simulated in this demo).');
