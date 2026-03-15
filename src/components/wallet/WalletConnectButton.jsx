@@ -1,6 +1,7 @@
 import React from 'react';
 import { useWallet } from '../../hooks/useWallet';
 import { formatAddress } from '../../utils/formatters';
+import { getUserName } from '../../utils/nameStorage';
 import { Button } from '../ui/Button';
 import { Wallet } from 'lucide-react';
 
@@ -11,7 +12,9 @@ export const WalletConnectButton = () => {
         return (
             <div className="flex items-center gap-2">
                 <div className="hidden md:flex flex-col items-end mr-2">
-                    <span className="text-sm font-medium text-gray-700">{formatAddress(account)}</span>
+                    <span className="text-sm font-medium text-gray-700">
+                        {getUserName(account) || formatAddress(account)}
+                    </span>
                     <span className="text-xs text-green-600 flex items-center">
                         <span className="w-2 h-2 bg-green-500 rounded-full mr-1"></span>
                         Connected

@@ -7,9 +7,12 @@ import { GrantAccessForm } from '../components/patient/GrantAccessForm';
 import { RevokeAccessForm } from '../components/patient/RevokeAccessForm';
 import { AuthorizedDoctors } from '../components/patient/AuthorizedDoctors';
 import { AuditLog } from '../components/audit/AuditLog';
-import { FolderPlus, Users, Activity, FileText } from 'lucide-react';
+import { ProfileSettings } from '../components/audit/ProfileSettings';
+import { FolderPlus, Users, Activity, FileText, UserCircle } from 'lucide-react';
+import { useWallet } from '../hooks/useWallet';
 
 export const PatientDashboard = () => {
+    const { account } = useWallet();
     const [activeTab, setActiveTab] = useState('records');
     const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -20,6 +23,7 @@ export const PatientDashboard = () => {
         { id: 'upload', label: 'Upload Record', icon: FolderPlus },
         { id: 'access', label: 'Access Control', icon: Users },
         { id: 'audit', label: 'Activity Log', icon: Activity },
+        { id: 'profile', label: 'Profile', icon: UserCircle },
     ];
 
     return (
@@ -89,7 +93,14 @@ export const PatientDashboard = () => {
                         {activeTab === 'audit' && (
                             <div className="space-y-6">
                                 <h2 className="text-2xl font-bold text-gray-900">Activity Log</h2>
-                                <AuditLog />
+                                <AuditLog role="patient" account={account} />
+                            </div>
+                        )}
+
+                        {activeTab === 'profile' && (
+                            <div className="space-y-6">
+                                <h2 className="text-2xl font-bold text-gray-900">My Profile</h2>
+                                <ProfileSettings />
                             </div>
                         )}
                     </div>

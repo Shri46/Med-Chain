@@ -6,9 +6,10 @@ import { useWallet } from '../../hooks/useWallet';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { Spinner } from '../ui/Spinner';
 import { formatAddress, formatDate } from '../../utils/formatters';
-import { Shield, Upload, UserPlus, UserMinus, Activity } from 'lucide-react';
+import { Shield, Upload, UserPlus, UserMinus } from 'lucide-react';
+import { getUserName } from '../../utils/nameStorage';
 
-export const AuditLog = () => {
+export const AuditLog = ({ role = 'patient', account }) => {
     const { provider } = useWallet();
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -16,35 +17,77 @@ export const AuditLog = () => {
 
     useEffect(() => {
         const fetchEvents = async () => {
-            if (!provider) return;
+            if (!provider || !account) return;
 
+            console.log("Fetching audit events...");
             try {
                 const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+                let allEventsUnsorted = [];
 
-                // Fetch all relevant event types
-                const [stored, granted, revoked, registered] = await Promise.all([
-                    contract.queryFilter(contract.filters.RecordStored()),
-                    contract.queryFilter(contract.filters.AccessGranted()),
-                    contract.queryFilter(contract.filters.AccessRevoked()),
-                    contract.queryFilter(contract.filters.RoleRegistered())
-                ]);
-
-                // Normalize events
+                // Normalize events to a common format
                 const normalize = (ev, type) => ({
                     type,
                     blockNumber: ev.blockNumber,
                     transactionHash: ev.transactionHash,
                     args: ev.args,
-                    timestamp: ev.args.timestamp // Assuming we added timestamp to events. If not, we need to fetch block.
-                    // Note: In my solidity contract, I added timestamp to events.
+                    timestamp: ev.args.timestamp || ev.args[ev.args.length - 1]
                 });
 
-                const allEvents = [
-                    ...stored.map(e => normalize(e, 'UPLOAD')),
-                    ...granted.map(e => normalize(e, 'GRANT')),
-                    ...revoked.map(e => normalize(e, 'REVOKE')),
-                    ...registered.map(e => normalize(e, 'REGISTER'))
-                ].sort((a, b) => {
+                if (role === 'patient') {
+                    // Patient sees: Uploads, Grants, Revokes related to themselves
+                    const stored = await contract.queryFilter('RecordStored');
+                    const granted = await contract.queryFilter('AccessGranted');
+                    const revoked = await contract.queryFilter('AccessRevoked');
+
+                    const myStored = stored.filter(e => e.args[0].toLowerCase() === account.toLowerCase());
+                    const myGranted = granted.filter(e => e.args[0].toLowerCase() === account.toLowerCase());
+                    const myRevoked = revoked.filter(e => e.args[0].toLowerCase() === account.toLowerCase());
+
+                    allEventsUnsorted = [
+                        ...myStored.map(e => normalize(e, 'UPLOAD')),
+                        ...myGranted.map(e => normalize(e, 'GRANT')),
+                        ...myRevoked.map(e => normalize(e, 'REVOKE'))
+                    ];
+                } else if (role === 'doctor') {
+                    // Doctor sees: Grants & Revokes related to themselves
+                    const granted = await contract.queryFilter('AccessGranted');
+                    const revoked = await contract.queryFilter('AccessRevoked');
+
+                    const myGranted = granted.filter(e => e.args[1].toLowerCase() === account.toLowerCase());
+                    const myRevoked = revoked.filter(e => e.args[1].toLowerCase() === account.toLowerCase());
+
+                    // Determine currently authorized patients to fetch their records
+                    const statusMap = {};
+                    const accessEvents = [...myGranted, ...myRevoked].sort((a, b) => {
+                        if (a.blockNumber !== b.blockNumber) return a.blockNumber - b.blockNumber;
+                        return (a.index || 0) - (b.index || 0);
+                    });
+
+                    accessEvents.forEach(e => {
+                        const evtName = e.eventName || (e.fragment && e.fragment.name);
+                        statusMap[e.args[0].toLowerCase()] = evtName === 'AccessGranted';
+                    });
+
+                    const authorizedPatients = Object.keys(statusMap).filter(address => statusMap[address]);
+
+                    // Fetch RecordStored only for authorized patients
+                    const uploads = [];
+                    if (authorizedPatients.length > 0) {
+                        const allStored = await contract.queryFilter('RecordStored');
+                        const relevantUploads = allStored.filter(e =>
+                            authorizedPatients.includes(e.args[0].toLowerCase())
+                        );
+                        uploads.push(...relevantUploads);
+                    }
+
+                    allEventsUnsorted = [
+                        ...uploads.map(e => normalize(e, 'UPLOAD')),
+                        ...myGranted.map(e => normalize(e, 'GRANT')),
+                        ...myRevoked.map(e => normalize(e, 'REVOKE'))
+                    ];
+                }
+
+                const sortedEvents = allEventsUnsorted.sort((a, b) => {
                     // Sort by timestamp desc (if available) or block number desc
                     if (a.args.timestamp && b.args.timestamp) {
                         return Number(b.args.timestamp) - Number(a.args.timestamp);
@@ -52,7 +95,7 @@ export const AuditLog = () => {
                     return b.blockNumber - a.blockNumber;
                 });
 
-                setEvents(allEvents);
+                setEvents(sortedEvents);
             } catch (error) {
                 console.error("Error fetching audit logs", error);
             } finally {
@@ -61,28 +104,33 @@ export const AuditLog = () => {
         };
 
         fetchEvents();
-    }, [provider]);
+    }, [provider, account, role]);
 
     const getIcon = (type) => {
         switch (type) {
             case 'UPLOAD': return <Upload className="h-5 w-5 text-blue-500" />;
             case 'GRANT': return <UserPlus className="h-5 w-5 text-green-500" />;
             case 'REVOKE': return <UserMinus className="h-5 w-5 text-red-500" />;
-            case 'REGISTER': return <Activity className="h-5 w-5 text-purple-500" />;
             default: return <Shield className="h-5 w-5 text-gray-500" />;
         }
     };
 
     const getDescription = (event) => {
+        const renderName = (address) => {
+            const name = getUserName(address);
+            if (name) {
+                return <span className="font-medium text-gray-900">{name} ({formatAddress(address)})</span>;
+            }
+            return <span className="font-mono text-gray-700">{formatAddress(address)}</span>;
+        };
+
         switch (event.type) {
             case 'UPLOAD':
-                return <>Patient <span className="font-mono text-gray-700">{formatAddress(event.args.patient)}</span> uploaded a new record.</>;
+                return <>Patient {renderName(event.args[0])} uploaded a new record.</>;
             case 'GRANT':
-                return <>Patient <span className="font-mono text-gray-700">{formatAddress(event.args.patient)}</span> granted access to Dr. <span className="font-mono text-gray-700">{formatAddress(event.args.doctor)}</span>.</>;
+                return <>Patient {renderName(event.args[0])} granted access to Dr. {renderName(event.args[1])}.</>;
             case 'REVOKE':
-                return <>Patient <span className="font-mono text-gray-700">{formatAddress(event.args.patient)}</span> revoked access from Dr. <span className="font-mono text-gray-700">{formatAddress(event.args.doctor)}</span>.</>;
-            case 'REGISTER':
-                return <>User <span className="font-mono text-gray-700">{formatAddress(event.args.user)}</span> registered as <span className="font-medium capitalize">{event.args.role}</span>.</>;
+                return <>Patient {renderName(event.args[0])} revoked access from Dr. {renderName(event.args[1])}.</>;
             default: return "Unknown system event";
         }
     };
@@ -94,7 +142,7 @@ export const AuditLog = () => {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>System Audit Log</CardTitle>
+                <CardTitle>{role === 'doctor' ? 'Patient Activity Feed' : 'My Activity Log'}</CardTitle>
                 <select
                     className="text-sm border-gray-300 rounded-md shadow-sm focus:border-primary-300 focus:ring focus:ring-primary-200 focus:ring-opacity-50"
                     value={filter}
@@ -104,7 +152,6 @@ export const AuditLog = () => {
                     <option value="UPLOAD">Uploads</option>
                     <option value="GRANT">Access Grants</option>
                     <option value="REVOKE">Access Revocations</option>
-                    <option value="REGISTER">Registrations</option>
                 </select>
             </CardHeader>
             <CardContent>
