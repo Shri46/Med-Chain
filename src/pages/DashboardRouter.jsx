@@ -9,12 +9,15 @@ import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { User, Stethoscope } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { saveUserName } from '../utils/nameStorage';
 
 export const DashboardRouter = () => {
     const { account, isConnecting, isInitializing } = useWallet();
     const { getRole, registerRole } = useContract();
     const [role, setRole] = useState(null); // 'patient', 'doctor', or ''
     const [loading, setLoading] = useState(false);
+    const [fullName, setFullName] = useState('');
+    const [nameError, setNameError] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -33,8 +36,15 @@ export const DashboardRouter = () => {
     }, [account, getRole]);
 
     const handleRoleRegister = async (selectedRole) => {
+        if (!fullName.trim()) {
+            setNameError('Please enter your full name');
+            return;
+        }
+
+        setNameError('');
         const success = await registerRole(selectedRole);
         if (success) {
+            saveUserName(account, fullName.trim());
             setRole(selectedRole);
         }
     };
@@ -73,6 +83,26 @@ export const DashboardRouter = () => {
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-8">
+                    {/* Common Name Input (Always shown before role selection) */}
+                    <div className="md:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-4">
+                        <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                            Enter Your Full Name
+                        </label>
+                        <input
+                            type="text"
+                            id="fullName"
+                            value={fullName}
+                            onChange={(e) => {
+                                setFullName(e.target.value);
+                                if (e.target.value.trim()) setNameError('');
+                            }}
+                            className={`w-full px-4 py-3 rounded-lg border focus:ring-2 focus:outline-none transition-colors ${nameError ? 'border-red-500 focus:ring-red-200' : 'border-gray-300 focus:ring-primary-200 focus:border-primary-500'
+                                }`}
+                            placeholder="e.g. John Doe"
+                        />
+                        {nameError && <p className="mt-2 text-sm text-red-600">{nameError}</p>}
+                    </div>
+
                     {/* Patient Card */}
                     <Card className="hover:ring-4 hover:ring-primary-100 transition-all cursor-pointer group" onClick={() => handleRoleRegister('patient')}>
                         <CardContent className="p-8 text-center flex flex-col items-center h-full justify-between">

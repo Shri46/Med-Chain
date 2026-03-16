@@ -7,6 +7,8 @@ import fs from 'fs'
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const KEYS_FILE = path.resolve(__dirname, 'keys.json');
+
 function mockKeyServer() {
   return {
     name: 'mock-key-server',
@@ -14,8 +16,8 @@ function mockKeyServer() {
       server.middlewares.use((req, res, next) => {
         if (req.url === '/api/keys' && req.method === 'GET') {
           res.setHeader('Content-Type', 'application/json');
-          if (fs.existsSync('keys.json')) {
-            res.end(fs.readFileSync('keys.json'));
+          if (fs.existsSync(KEYS_FILE)) {
+            res.end(fs.readFileSync(KEYS_FILE));
           } else {
             res.end('{}');
           }
@@ -26,9 +28,9 @@ function mockKeyServer() {
             try {
               const keys = JSON.parse(body);
               let existing = {};
-              if (fs.existsSync('keys.json')) existing = JSON.parse(fs.readFileSync('keys.json', 'utf-8'));
+              if (fs.existsSync(KEYS_FILE)) existing = JSON.parse(fs.readFileSync(KEYS_FILE, 'utf-8'));
               Object.assign(existing, keys);
-              fs.writeFileSync('keys.json', JSON.stringify(existing));
+              fs.writeFileSync(KEYS_FILE, JSON.stringify(existing, null, 2));
               res.end(JSON.stringify({ success: true }));
             } catch (e) { res.statusCode = 500; res.end(e.message); }
           });

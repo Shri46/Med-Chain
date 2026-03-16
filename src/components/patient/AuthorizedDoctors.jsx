@@ -3,6 +3,7 @@ import { useContract } from '../../hooks/useContract'; // We'll need to add even
 import { useWallet } from '../../hooks/useWallet';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
 import { formatAddress } from '../../utils/formatters';
+import { getUserName } from '../../utils/nameStorage';
 import { Spinner } from '../ui/Spinner';
 import { CONTRACT_ADDRESS } from '../../constants/contractAddress';
 import { CONTRACT_ABI } from '../../constants/contractABI';
@@ -72,12 +73,17 @@ export const AuthorizedDoctors = ({ refreshTrigger }) => {
                     <p className="text-gray-500 text-sm">No doctors have access specifically granted via the contract.</p>
                 ) : (
                     <ul className="divide-y divide-gray-200">
-                        {doctors.map(doctor => (
-                            <li key={doctor} className="py-2 flex justify-between items-center">
-                                <span className="font-mono text-sm text-gray-700">{formatAddress(doctor)}</span>
-                                <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Active</span>
-                            </li>
-                        ))}
+                        {doctors.map(doctor => {
+                            const name = getUserName(doctor);
+                            return (
+                                <li key={doctor} className="py-2 flex justify-between items-center">
+                                    <span className={name ? "text-sm font-medium text-gray-900" : "font-mono text-sm text-gray-700"}>
+                                        {name ? `${name} (${formatAddress(doctor)})` : formatAddress(doctor)}
+                                    </span>
+                                    <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded-full">Active</span>
+                                </li>
+                            );
+                        })}
                     </ul>
                 )}
             </CardContent>
