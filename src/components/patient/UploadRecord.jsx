@@ -3,7 +3,6 @@ import { useDropzone } from 'react-dropzone';
 import { Upload, X, File, Lock } from 'lucide-react';
 import { useIPFS } from '../../hooks/useIPFS';
 import { useContract } from '../../hooks/useContract';
-import { generateEncryptionKey, exportKey, encryptFile } from '../../utils/encryption';
 import { Button } from '../ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { useToast } from '../../context/ToastContext';
@@ -30,42 +29,12 @@ export const UploadRecord = ({ onUploadSuccess }) => {
 
         setIsUploading(true);
         try {
-            // 1. Read file
             const arrayBuffer = await file.arrayBuffer();
+            const data = new Uint8Array(arrayBuffer);
 
-            // 2. Generate Key
-            const key = await generateEncryptionKey();
-
-            // 3. Encrypt File
-            const { encryptedData, iv } = await encryptFile(arrayBuffer, key);
-
-            // Combine IV and Encrypted Data for storage (usually IV is prepended)
-            // Here, for simplicity, we'll just upload the encrypted blob.
-            // In a real app, we need to store the IV alongside the data or encryption key.
-            // OPTIMIZATION: We will prepend the 12-byte IV to the encrypted data
-            const combinedData = new Uint8Array(iv.length + encryptedData.length);
-            combinedData.set(iv);
-            combinedData.set(encryptedData, iv.length);
-
-            // 4. Upload to IPFS
             showToast('Uploading to IPFS...', 'loading');
-            const cid = await uploadToIPFS(combinedData);
+            const cid = await uploadToIPFS(data);
 
-            // 5. Store Key (DEMO ONLY: LocalStorage)
-            // In production, this should be encrypted with the user's wallet public key or stored in a secure vault
-            const exportedKey = await exportKey(key);
-            const keys = JSON.parse(localStorage.getItem('medchain_keys') || '{}');
-            keys[cid] = exportedKey;
-            localStorage.setItem('medchain_keys', JSON.stringify(keys));
-
-            // Sync with Mock Key Server to allow Doctor access across browser instances in testing
-            try {
-                await fetch('/api/keys', { method: 'POST', body: JSON.stringify({ [cid]: exportedKey }) });
-            } catch (e) {
-                console.error('Mock server sync failed', e);
-            }
-
-            // 6. Smart Contract Transaction
             showToast('Confirm transaction in MetaMask...', 'loading');
             const success = await storeCID(cid, file.name, file.type);
 
@@ -98,10 +67,6 @@ export const UploadRecord = ({ onUploadSuccess }) => {
                         <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                         <p className="text-gray-600 font-medium">Click or drag file to upload</p>
                         <p className="text-xs text-gray-400 mt-2">PDF, PNG, JPG up to 10MB</p>
-                        <div className="flex items-center justify-center mt-4 text-xs text-blue-600 bg-blue-50 py-1 px-2 rounded-full inline-flex">
-                            <Lock className="w-3 h-3 mr-1" />
-                            Client-side Encrypted
-                        </div>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -123,7 +88,7 @@ export const UploadRecord = ({ onUploadSuccess }) => {
                             isLoading={isUploading}
                             className="w-full"
                         >
-                            {isUploading ? 'Encrypting & Uploading...' : 'Encrypt & Upload Reocrd'}
+                            {isUploading ? 'Uploading...' : 'Upload Record'}
                         </Button>
                     </div>
                 )}

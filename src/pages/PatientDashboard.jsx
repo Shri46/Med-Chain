@@ -3,9 +3,6 @@ import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
 import { UploadRecord } from '../components/patient/UploadRecord';
 import { RecordList } from '../components/patient/RecordList';
-import { GrantAccessForm } from '../components/patient/GrantAccessForm';
-import { RevokeAccessForm } from '../components/patient/RevokeAccessForm';
-import { AuthorizedDoctors } from '../components/patient/AuthorizedDoctors';
 import { AuditLog } from '../components/audit/AuditLog';
 import { ProfileSettings } from '../components/audit/ProfileSettings';
 import { FolderPlus, Users, Activity, FileText, UserCircle } from 'lucide-react';
@@ -21,7 +18,6 @@ export const PatientDashboard = () => {
     const tabs = [
         { id: 'records', label: 'My Records', icon: FileText },
         { id: 'upload', label: 'Upload Record', icon: FolderPlus },
-        { id: 'access', label: 'Access Control', icon: Users },
         { id: 'audit', label: 'Activity Log', icon: Activity },
         { id: 'profile', label: 'Profile', icon: UserCircle },
     ];
@@ -75,20 +71,7 @@ export const PatientDashboard = () => {
                             </div>
                         )}
 
-                        {activeTab === 'access' && (
-                            <div className="space-y-6">
-                                <h2 className="text-2xl font-bold text-gray-900">Access Control</h2>
-                                <div className="grid gap-6 md:grid-cols-2">
-                                    <div className="space-y-6">
-                                        <GrantAccessForm onSuccess={handleRefresh} />
-                                        <RevokeAccessForm onSuccess={handleRefresh} />
-                                    </div>
-                                    <div>
-                                        <AuthorizedDoctors refreshTrigger={refreshTrigger} />
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+
 
                         {activeTab === 'audit' && (
                             <div className="space-y-6">
