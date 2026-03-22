@@ -28,6 +28,7 @@ export const DashboardRouter = () => {
     const [newHospitalName, setNewHospitalName] = useState('');
     const [isCreatingHospital, setIsCreatingHospital] = useState(false);
     const [showDoctorForm, setShowDoctorForm] = useState(false);
+    const [showPatientForm, setShowPatientForm] = useState(false);
     
     const navigate = useNavigate();
 
@@ -70,7 +71,15 @@ export const DashboardRouter = () => {
                 setNameError('');
                 return;
             }
+        } else if (selectedRole === 'patient') {
+            if (!showPatientForm) {
+                setShowPatientForm(true);
+                setNameError('');
+                return;
+            }
+        }
 
+        if ((selectedRole === 'doctor' || selectedRole === 'patient') && (showDoctorForm || showPatientForm)) {
             if (isCreatingHospital && !newHospitalName.trim()) {
                 setNameError('Please enter hospital name');
                 return;
@@ -85,13 +94,15 @@ export const DashboardRouter = () => {
         setLoading(true);
         
         try {
-            if (selectedRole === 'doctor') {
+            if (selectedRole === 'doctor' || selectedRole === 'patient') {
                 let finalHospitalId = selectedHospital;
                 if (isCreatingHospital) {
                     const hRes = await axios.post(`${BACKEND_URL}/hospitals`, { name: newHospitalName.trim() });
                     finalHospitalId = hRes.data._id;
                 }
-                await axios.post(`${BACKEND_URL}/doctors`, {
+                
+                const endpoint = selectedRole === 'doctor' ? '/doctors' : '/patients';
+                await axios.post(`${BACKEND_URL}${endpoint}`, {
                     name: fullName.trim(),
                     walletAddress: account,
                     hospitalId: finalHospitalId
@@ -164,7 +175,7 @@ export const DashboardRouter = () => {
                         {nameError && !showDoctorForm && <p className="mt-2 text-sm text-red-600">{nameError}</p>}
                     </div>
 
-                    {!showDoctorForm ? (
+                    {!showDoctorForm && !showPatientForm ? (
                         <>
                             {/* Patient Card */}
                             <Card className="hover:ring-4 hover:ring-primary-100 transition-all cursor-pointer group" onClick={() => handleRoleRegister('patient')}>
@@ -200,14 +211,16 @@ export const DashboardRouter = () => {
                         </>
                     ) : (
                         <div className="md:col-span-2">
-                            {/* Doctor Registration Form (Expanded) */}
-                            <Card className="border border-green-200">
+                            {/* Registration Form (Expanded) */}
+                            <Card className={showDoctorForm ? "border border-green-200" : "border border-primary-200"}>
                                 <CardContent className="p-8">
                                     <div className="flex items-center gap-4 mb-6">
-                                        <div className="bg-green-50 p-3 rounded-full">
-                                            <Stethoscope className="h-8 w-8 text-green-600" />
+                                        <div className={`p-3 rounded-full ${showDoctorForm ? 'bg-green-50' : 'bg-primary-50'}`}>
+                                            {showDoctorForm ? <Stethoscope className="h-8 w-8 text-green-600" /> : <User className="h-8 w-8 text-primary-600" />}
                                         </div>
-                                        <h3 className="text-2xl font-bold text-gray-900">Doctor Registration</h3>
+                                        <h3 className="text-2xl font-bold text-gray-900">
+                                            {showDoctorForm ? 'Doctor Registration' : 'Patient Registration'}
+                                        </h3>
                                     </div>
 
                                     <div className="space-y-6">
@@ -248,11 +261,11 @@ export const DashboardRouter = () => {
                                             </div>
                                         )}
 
-                                        {nameError && showDoctorForm && <p className="text-sm text-red-600">{nameError}</p>}
+                                        {nameError && (showDoctorForm || showPatientForm) && <p className="text-sm text-red-600">{nameError}</p>}
 
                                         <div className="flex gap-4 pt-4">
-                                            <Button variant="secondary" onClick={() => setShowDoctorForm(false)} className="w-full">Back</Button>
-                                            <Button onClick={() => handleRoleRegister('doctor')} className="w-full bg-green-600 hover:bg-green-700">Complete Registration</Button>
+                                            <Button variant="secondary" onClick={() => { setShowDoctorForm(false); setShowPatientForm(false); }} className="w-full">Back</Button>
+                                            <Button onClick={() => handleRoleRegister(showDoctorForm ? 'doctor' : 'patient')} className={`w-full ${showDoctorForm ? 'bg-green-600 hover:bg-green-700' : 'bg-primary-600 hover:bg-primary-700'}`}>Complete Registration</Button>
                                         </div>
                                     </div>
                                 </CardContent>

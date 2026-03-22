@@ -5,6 +5,7 @@ const cors = require('cors');
 
 const Hospital = require('./models/Hospital');
 const Doctor = require('./models/Doctor');
+const Patient = require('./models/Patient');
 
 const app = express();
 app.use(cors());
@@ -41,6 +42,33 @@ app.post('/hospitals', async (req, res) => {
       await hospital.save();
     }
     res.status(201).json(hospital);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// --- PATIENTS API ---
+app.post('/patients', async (req, res) => {
+  try {
+    const { name, walletAddress, hospitalId } = req.body;
+    
+    // Check if hospital exists
+    const hospitalExists = await Hospital.findById(hospitalId);
+    if (!hospitalExists) {
+        return res.status(404).json({ error: 'Hospital not found' });
+    }
+
+    let patient = await Patient.findOne({ walletAddress });
+    if (patient) {
+      // Update existing patient
+      patient.name = name;
+      patient.hospitalId = hospitalId;
+      await patient.save();
+    } else {
+      patient = new Patient({ name, walletAddress, hospitalId });
+      await patient.save();
+    }
+    res.status(201).json(patient);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

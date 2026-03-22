@@ -5,6 +5,9 @@ import { UploadRecord } from '../components/patient/UploadRecord';
 import { RecordList } from '../components/patient/RecordList';
 import { AuditLog } from '../components/audit/AuditLog';
 import { ProfileSettings } from '../components/audit/ProfileSettings';
+import { AuthorizedDoctors } from '../components/patient/AuthorizedDoctors';
+import { GrantAccessForm } from '../components/patient/GrantAccessForm';
+import { RevokeAccessForm } from '../components/patient/RevokeAccessForm';
 import { FolderPlus, Users, Activity, FileText, UserCircle } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
 
@@ -18,6 +21,7 @@ export const PatientDashboard = () => {
     const tabs = [
         { id: 'records', label: 'My Records', icon: FileText },
         { id: 'upload', label: 'Upload Record', icon: FolderPlus },
+        { id: 'access', label: 'Access Control', icon: Users },
         { id: 'audit', label: 'Activity Log', icon: Activity },
         { id: 'profile', label: 'Profile', icon: UserCircle },
     ];
@@ -71,9 +75,16 @@ export const PatientDashboard = () => {
                             </div>
                         )}
 
-
-
-                        {activeTab === 'audit' && (
+                        {activeTab === 'access' && (
+                            <div className="space-y-6">
+                                <h2 className="text-2xl font-bold text-gray-900">Access Control</h2>
+                                <AuthorizedDoctors refreshTrigger={refreshTrigger} />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <GrantAccessForm onSuccess={handleRefresh} />
+                                    <RevokeAccessForm onSuccess={handleRefresh} />
+                                </div>
+                            </div>
+                        )}                        {activeTab === 'audit' && (
                             <div className="space-y-6">
                                 <h2 className="text-2xl font-bold text-gray-900">Activity Log</h2>
                                 <AuditLog role="patient" account={account} />

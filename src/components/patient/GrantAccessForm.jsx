@@ -118,7 +118,7 @@ export const GrantAccessForm = ({ onSuccess }) => {
                                 <option value="">-- Choose a doctor --</option>
                                 {doctors.map((doc) => (
                                     <option key={doc.walletAddress} value={doc.walletAddress}>
-                                        {doc.name} ({formatAddress(doc.walletAddress)})
+                                        {doc.name}
                                     </option>
                                 ))}
                             </select>
