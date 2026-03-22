@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
 import { PatientSearch } from '../components/doctor/PatientSearch';
+import { ConnectedPatients } from '../components/doctor/ConnectedPatients';
 import { AccessibleRecords } from '../components/doctor/AccessibleRecords';
 import { AuditLog } from '../components/audit/AuditLog';
 import { ProfileSettings } from '../components/audit/ProfileSettings';
@@ -12,11 +13,11 @@ import { useWallet } from '../hooks/useWallet';
 
 export const DoctorDashboard = () => {
     const { account } = useWallet();
-    const [activeTab, setActiveTab] = useState('search');
+    const [activeTab, setActiveTab] = useState('patients');
     const [searchedPatient, setSearchedPatient] = useState(null);
 
     const tabs = [
-        { id: 'search', label: 'Patient Search', icon: Search },
+        { id: 'patients', label: 'My Patients', icon: Search },
         { id: 'audit', label: 'My Activity', icon: Activity },
         { id: 'profile', label: 'Profile', icon: UserCircle },
     ];
@@ -53,10 +54,10 @@ export const DoctorDashboard = () => {
 
                     {/* Main Content Area */}
                     <div className="md:col-span-9">
-                        {activeTab === 'search' && (
+                        {activeTab === 'patients' && (
                             <div className="space-y-6">
                                 <h2 className="text-2xl font-bold text-gray-900">Patient Records</h2>
-                                <PatientSearch onSearch={setSearchedPatient} />
+                                <ConnectedPatients onSelectPatient={setSearchedPatient} />
 
                                 {searchedPatient && (
                                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
