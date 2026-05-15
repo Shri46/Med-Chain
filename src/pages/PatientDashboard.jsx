@@ -3,28 +3,76 @@ import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
 import { UploadRecord } from '../components/patient/UploadRecord';
 import { RecordList } from '../components/patient/RecordList';
+import { AuditLog } from '../components/audit/AuditLog';
+import { ProfileSettings } from '../components/audit/ProfileSettings';
+import { PatientProfileForm } from '../components/patient/PatientProfileForm';
 import { GrantAccessForm } from '../components/patient/GrantAccessForm';
 import { RevokeAccessForm } from '../components/patient/RevokeAccessForm';
 import { AuthorizedDoctors } from '../components/patient/AuthorizedDoctors';
-import { AuditLog } from '../components/audit/AuditLog';
-import { ProfileSettings } from '../components/audit/ProfileSettings';
-import { FolderPlus, Users, Activity, FileText, UserCircle } from 'lucide-react';
+import { FolderPlus, Users, Activity, FileText, UserCircle, Shield } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
+import { Spinner } from '../components/ui/Spinner';
+import axios from 'axios';
 
 export const PatientDashboard = () => {
     const { account } = useWallet();
     const [activeTab, setActiveTab] = useState('records');
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [profileExists, setProfileExists] = useState(false);
+    const [patient, setPatient] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+    const checkProfile = React.useCallback(async () => {
+        if (account) {
+            try {
+                const res = await axios.get(`http://localhost:5000/patients/${account}`);
+                if (res.data && res.data.walletAddress) {
+                    setPatient(res.data);
+                    setProfileExists(true);
+                } else {
+                    setPatient(null);
+                    setProfileExists(false);
+                }
+            } catch (err) {
+                setPatient(null);
+                setProfileExists(false);
+            } finally {
+                setLoading(false);
+            }
+        }
+    }, [account]);
+
+    React.useEffect(() => {
+        checkProfile();
+    }, [checkProfile]);
 
     const handleRefresh = () => setRefreshTrigger(prev => prev + 1);
 
     const tabs = [
         { id: 'records', label: 'My Records', icon: FileText },
         { id: 'upload', label: 'Upload Record', icon: FolderPlus },
-        { id: 'access', label: 'Access Control', icon: Users },
+        { id: 'access', label: 'Access Control', icon: Shield },
         { id: 'audit', label: 'Activity Log', icon: Activity },
         { id: 'profile', label: 'Profile', icon: UserCircle },
     ];
+
+    if (loading) {
+        return <div className="flex items-center justify-center min-h-screen bg-gray-50"><Spinner size="lg" /></div>;
+    }
+
+    if (!profileExists) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col">
+                <Navbar />
+                <main className="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+                    <div className="w-full max-w-3xl">
+                        <PatientProfileForm onComplete={checkProfile} />
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -78,9 +126,12 @@ export const PatientDashboard = () => {
                         {activeTab === 'access' && (
                             <div className="space-y-6">
                                 <h2 className="text-2xl font-bold text-gray-900">Access Control</h2>
-                                <div className="grid gap-6 md:grid-cols-2">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     <div className="space-y-6">
-                                        <GrantAccessForm onSuccess={handleRefresh} />
+                                        <GrantAccessForm 
+                                            onSuccess={handleRefresh} 
+                                            hospitalId={patient?.hospitalId?._id || patient?.hospitalId} 
+                                        />
                                         <RevokeAccessForm onSuccess={handleRefresh} />
                                     </div>
                                     <div>
@@ -100,7 +151,7 @@ export const PatientDashboard = () => {
                         {activeTab === 'profile' && (
                             <div className="space-y-6">
                                 <h2 className="text-2xl font-bold text-gray-900">My Profile</h2>
-                                <ProfileSettings />
+                                <PatientProfileForm onComplete={() => {}} />
                             </div>
                         )}
                     </div>

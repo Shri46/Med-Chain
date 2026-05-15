@@ -2,24 +2,64 @@ import React, { useState } from 'react';
 import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
 import { PatientSearch } from '../components/doctor/PatientSearch';
-import { AccessibleRecords } from '../components/doctor/AccessibleRecords';
+import { PatientProfileCard } from '../components/doctor/PatientProfileCard';
 import { AuditLog } from '../components/audit/AuditLog';
 import { ProfileSettings } from '../components/audit/ProfileSettings';
 import { Search, Activity, UserCircle } from 'lucide-react';
 import { getUserName } from '../utils/nameStorage';
 import { formatAddress } from '../utils/formatters';
 import { useWallet } from '../hooks/useWallet';
+import axios from 'axios';
+import { Spinner } from '../components/ui/Spinner';
+import { DoctorProfileForm } from '../components/doctor/DoctorProfileForm';
 
 export const DoctorDashboard = () => {
     const { account } = useWallet();
     const [activeTab, setActiveTab] = useState('search');
     const [searchedPatient, setSearchedPatient] = useState(null);
+    const [profileExists, setProfileExists] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    const checkProfile = React.useCallback(async () => {
+        if (account) {
+            try {
+                const res = await axios.get(`http://localhost:5000/api/doctors/${account}`);
+                setProfileExists(!!res.data.walletAddress);
+            } catch (err) {
+                setProfileExists(false);
+            } finally {
+                setLoading(false);
+            }
+        }
+    }, [account]);
+
+    React.useEffect(() => {
+        checkProfile();
+    }, [checkProfile]);
 
     const tabs = [
         { id: 'search', label: 'Patient Search', icon: Search },
         { id: 'audit', label: 'My Activity', icon: Activity },
         { id: 'profile', label: 'Profile', icon: UserCircle },
     ];
+
+    if (loading) {
+        return <div className="flex items-center justify-center min-h-screen bg-gray-50"><Spinner size="lg" /></div>;
+    }
+
+    if (!profileExists) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col">
+                <Navbar />
+                <main className="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+                    <div className="w-full max-w-3xl">
+                        <DoctorProfileForm onComplete={checkProfile} />
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -61,19 +101,14 @@ export const DoctorDashboard = () => {
                                 {searchedPatient && (
                                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                                         <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-lg font-medium text-gray-700">
-                                                Records for: <span className={getUserName(searchedPatient) ? "font-medium text-primary-700" : "font-mono text-primary-600"}>
-                                                    {getUserName(searchedPatient) ? `${getUserName(searchedPatient)} (${formatAddress(searchedPatient)})` : formatAddress(searchedPatient)}
-                                                </span>
-                                            </h3>
                                             <button
                                                 onClick={() => setSearchedPatient(null)}
-                                                className="text-sm text-gray-500 hover:text-gray-700"
+                                                className="text-sm font-medium text-primary-600 hover:text-primary-800 bg-primary-50 px-3 py-1 rounded-md"
                                             >
-                                                Clear Search
+                                                &larr; Back to Search
                                             </button>
                                         </div>
-                                        <AccessibleRecords patientAddress={searchedPatient} />
+                                        <PatientProfileCard patientAddress={searchedPatient} />
                                     </div>
                                 )}
                             </div>

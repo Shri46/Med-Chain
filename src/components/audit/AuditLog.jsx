@@ -34,19 +34,13 @@ export const AuditLog = ({ role = 'patient', account }) => {
                 });
 
                 if (role === 'patient') {
-                    // Patient sees: Uploads, Grants, Revokes related to themselves
+                    // Patient sees: Uploads related to themselves
                     const stored = await contract.queryFilter('RecordStored');
-                    const granted = await contract.queryFilter('AccessGranted');
-                    const revoked = await contract.queryFilter('AccessRevoked');
 
                     const myStored = stored.filter(e => e.args[0].toLowerCase() === account.toLowerCase());
-                    const myGranted = granted.filter(e => e.args[0].toLowerCase() === account.toLowerCase());
-                    const myRevoked = revoked.filter(e => e.args[0].toLowerCase() === account.toLowerCase());
 
                     allEventsUnsorted = [
-                        ...myStored.map(e => normalize(e, 'UPLOAD')),
-                        ...myGranted.map(e => normalize(e, 'GRANT')),
-                        ...myRevoked.map(e => normalize(e, 'REVOKE'))
+                        ...myStored.map(e => normalize(e, 'UPLOAD'))
                     ];
                 } else if (role === 'doctor') {
                     // Doctor sees: Grants & Revokes related to themselves
@@ -81,9 +75,7 @@ export const AuditLog = ({ role = 'patient', account }) => {
                     }
 
                     allEventsUnsorted = [
-                        ...uploads.map(e => normalize(e, 'UPLOAD')),
-                        ...myGranted.map(e => normalize(e, 'GRANT')),
-                        ...myRevoked.map(e => normalize(e, 'REVOKE'))
+                        ...uploads.map(e => normalize(e, 'UPLOAD'))
                     ];
                 }
 
@@ -109,8 +101,6 @@ export const AuditLog = ({ role = 'patient', account }) => {
     const getIcon = (type) => {
         switch (type) {
             case 'UPLOAD': return <Upload className="h-5 w-5 text-blue-500" />;
-            case 'GRANT': return <UserPlus className="h-5 w-5 text-green-500" />;
-            case 'REVOKE': return <UserMinus className="h-5 w-5 text-red-500" />;
             default: return <Shield className="h-5 w-5 text-gray-500" />;
         }
     };
@@ -127,10 +117,6 @@ export const AuditLog = ({ role = 'patient', account }) => {
         switch (event.type) {
             case 'UPLOAD':
                 return <>Patient {renderName(event.args[0])} uploaded a new record.</>;
-            case 'GRANT':
-                return <>Patient {renderName(event.args[0])} granted access to Dr. {renderName(event.args[1])}.</>;
-            case 'REVOKE':
-                return <>Patient {renderName(event.args[0])} revoked access from Dr. {renderName(event.args[1])}.</>;
             default: return "Unknown system event";
         }
     };
@@ -150,8 +136,6 @@ export const AuditLog = ({ role = 'patient', account }) => {
                 >
                     <option value="ALL">All Events</option>
                     <option value="UPLOAD">Uploads</option>
-                    <option value="GRANT">Access Grants</option>
-                    <option value="REVOKE">Access Revocations</option>
                 </select>
             </CardHeader>
             <CardContent>
