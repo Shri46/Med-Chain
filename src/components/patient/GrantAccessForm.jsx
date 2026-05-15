@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useContract } from '../../hooks/useContract';
 import { Button } from '../ui/Button';
 import { Card, CardHeader, CardTitle, CardContent } from '../ui/Card';
@@ -11,28 +12,26 @@ import { ethers } from 'ethers';
 import { getUserName } from '../../utils/nameStorage';
 import { formatAddress } from '../../utils/formatters';
 
-export const GrantAccessForm = ({ onSuccess }) => {
+export const GrantAccessForm = ({ onSuccess, hospitalId }) => {
     const [doctorAddress, setDoctorAddress] = useState('');
-    const [availableDoctors, setAvailableDoctors] = useState([]);
+    const [doctors, setDoctors] = useState([]);
     const [isFetchingDoctors, setIsFetchingDoctors] = useState(true);
 
-    const { provider } = useWallet();
     const { grantAccess, isLoading } = useContract();
     const { showToast } = useToast();
 
     useEffect(() => {
         const fetchDoctors = async () => {
-            if (!provider) return;
             setIsFetchingDoctors(true);
             try {
-                const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
-                // Query all RoleRegistered events to find doctors
-                const filter = contract.filters.RoleRegistered(null, 'doctor');
-                const events = await contract.queryFilter(filter);
-
-                // Get unique doctor addresses (in case someone registered multiple times)
-                const uniqueDoctors = [...new Set(events.map(e => e.args.user))];
-                setAvailableDoctors(uniqueDoctors);
+                console.log("Fetching doctors for hospitalId:", hospitalId);
+                const url = hospitalId 
+                    ? `http://localhost:5000/api/doctors?hospitalId=${hospitalId}`
+                    : 'http://localhost:5000/api/doctors';
+                
+                const res = await axios.get(url);
+                console.log("Fetched doctors response:", res.data);
+                setDoctors(res.data);
             } catch (error) {
                 console.error("Error fetching available doctors:", error);
             } finally {
@@ -41,7 +40,7 @@ export const GrantAccessForm = ({ onSuccess }) => {
         };
 
         fetchDoctors();
-    }, [provider]);
+    }, [hospitalId]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -78,20 +77,17 @@ export const GrantAccessForm = ({ onSuccess }) => {
                                 disabled={isLoading || isFetchingDoctors}
                             >
                                 <option value="">-- Choose a doctor --</option>
-                                {availableDoctors.map((docAddr) => {
-                                    const name = getUserName(docAddr);
-                                    return (
-                                        <option key={docAddr} value={docAddr}>
-                                            {name ? `${name} (${formatAddress(docAddr)})` : formatAddress(docAddr)}
-                                        </option>
-                                    );
-                                })}
+                                {doctors.map((doc) => (
+                                    <option key={doc._id} value={doc.walletAddress}>
+                                        {doc.name || 'Unknown Doctor'} ({formatAddress(doc.walletAddress)})
+                                    </option>
+                                ))}
                             </select>
                         </div>
                         {isFetchingDoctors && (
                             <p className="mt-2 text-xs text-primary-600">Loading available doctors...</p>
                         )}
-                        {!isFetchingDoctors && availableDoctors.length === 0 && (
+                        {!isFetchingDoctors && doctors.length === 0 && (
                             <p className="mt-2 text-xs text-red-500">No registered doctors found on the network.</p>
                         )}
                         <p className="mt-2 text-xs text-gray-500">

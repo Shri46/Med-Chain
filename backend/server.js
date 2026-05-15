@@ -5,6 +5,7 @@ const cors = require('cors');
 
 const Patient = require('./models/Patient');
 const Hospital = require('./models/Hospital');
+const Doctor = require('./models/Doctor');
 
 const app = express();
 app.use(cors());
@@ -64,7 +65,9 @@ app.get('/patients', async (req, res) => {
 
 app.get('/patients/:walletAddress', async (req, res) => {
     try {
-        const patient = await Patient.findOne({ walletAddress: req.params.walletAddress }).populate('hospitalId');
+        const patient = await Patient.findOne({ 
+            walletAddress: { $regex: new RegExp(`^${req.params.walletAddress}$`, 'i') } 
+        }).populate('hospitalId');
         if (!patient) return res.status(404).json({ message: 'Patient not found' });
         res.json(patient);
     } catch (err) {
@@ -91,6 +94,48 @@ app.get('/patients/byHospital/:hospitalId', async (req, res) => {
     try {
         const patients = await Patient.find({ hospitalId: req.params.hospitalId });
         res.json(patients);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Doctor Routes
+app.post('/api/doctors', async (req, res) => {
+    try {
+        const { name, walletAddress, hospitalId } = req.body;
+        const newDoctor = new Doctor({ name, walletAddress, hospitalId });
+        await newDoctor.save();
+        res.status(201).json(newDoctor);
+    } catch (err) {
+        console.error('Error in POST /api/doctors:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/doctors', async (req, res) => {
+    try {
+        const { hospitalId } = req.query;
+        console.log(`Fetching doctors. Filter hospitalId: ${hospitalId || 'none'}`);
+        
+        let query = {};
+        if (hospitalId && hospitalId !== 'undefined' && hospitalId !== 'null') {
+            query.hospitalId = hospitalId;
+        }
+        
+        const doctors = await Doctor.find(query);
+        console.log(`Found ${doctors.length} doctors`);
+        res.json(doctors);
+    } catch (err) {
+        console.error('Error in GET /api/doctors:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/doctors/:walletAddress', async (req, res) => {
+    try {
+        const doctor = await Doctor.findOne({ walletAddress: { $regex: new RegExp(`^${req.params.walletAddress}$`, 'i') } });
+        if (!doctor) return res.status(404).json({ message: 'Doctor not found' });
+        res.json(doctor);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

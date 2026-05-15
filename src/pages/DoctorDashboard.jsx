@@ -9,17 +9,57 @@ import { Search, Activity, UserCircle } from 'lucide-react';
 import { getUserName } from '../utils/nameStorage';
 import { formatAddress } from '../utils/formatters';
 import { useWallet } from '../hooks/useWallet';
+import axios from 'axios';
+import { Spinner } from '../components/ui/Spinner';
+import { DoctorProfileForm } from '../components/doctor/DoctorProfileForm';
 
 export const DoctorDashboard = () => {
     const { account } = useWallet();
     const [activeTab, setActiveTab] = useState('search');
     const [searchedPatient, setSearchedPatient] = useState(null);
+    const [profileExists, setProfileExists] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    const checkProfile = React.useCallback(async () => {
+        if (account) {
+            try {
+                const res = await axios.get(`http://localhost:5000/api/doctors/${account}`);
+                setProfileExists(!!res.data.walletAddress);
+            } catch (err) {
+                setProfileExists(false);
+            } finally {
+                setLoading(false);
+            }
+        }
+    }, [account]);
+
+    React.useEffect(() => {
+        checkProfile();
+    }, [checkProfile]);
 
     const tabs = [
         { id: 'search', label: 'Patient Search', icon: Search },
         { id: 'audit', label: 'My Activity', icon: Activity },
         { id: 'profile', label: 'Profile', icon: UserCircle },
     ];
+
+    if (loading) {
+        return <div className="flex items-center justify-center min-h-screen bg-gray-50"><Spinner size="lg" /></div>;
+    }
+
+    if (!profileExists) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col">
+                <Navbar />
+                <main className="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+                    <div className="w-full max-w-3xl">
+                        <DoctorProfileForm onComplete={checkProfile} />
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
