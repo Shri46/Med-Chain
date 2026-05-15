@@ -5,13 +5,38 @@ import { UploadRecord } from '../components/patient/UploadRecord';
 import { RecordList } from '../components/patient/RecordList';
 import { AuditLog } from '../components/audit/AuditLog';
 import { ProfileSettings } from '../components/audit/ProfileSettings';
+import { PatientProfileForm } from '../components/patient/PatientProfileForm';
 import { FolderPlus, Users, Activity, FileText, UserCircle } from 'lucide-react';
 import { useWallet } from '../hooks/useWallet';
+import { Spinner } from '../components/ui/Spinner';
+import axios from 'axios';
 
 export const PatientDashboard = () => {
     const { account } = useWallet();
     const [activeTab, setActiveTab] = useState('records');
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [profileExists, setProfileExists] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    React.useEffect(() => {
+        const checkProfile = async () => {
+            if (account) {
+                try {
+                    const res = await axios.get(`http://localhost:5000/patients/${account}`);
+                    if (res.data && res.data.walletAddress) {
+                        setProfileExists(true);
+                    } else {
+                        setProfileExists(false);
+                    }
+                } catch (err) {
+                    setProfileExists(false);
+                } finally {
+                    setLoading(false);
+                }
+            }
+        };
+        checkProfile();
+    }, [account]);
 
     const handleRefresh = () => setRefreshTrigger(prev => prev + 1);
 
@@ -21,6 +46,24 @@ export const PatientDashboard = () => {
         { id: 'audit', label: 'Activity Log', icon: Activity },
         { id: 'profile', label: 'Profile', icon: UserCircle },
     ];
+
+    if (loading) {
+        return <div className="flex items-center justify-center min-h-screen bg-gray-50"><Spinner size="lg" /></div>;
+    }
+
+    if (!profileExists) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col">
+                <Navbar />
+                <main className="flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+                    <div className="w-full max-w-3xl">
+                        <PatientProfileForm onComplete={() => setProfileExists(true)} />
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -83,7 +126,7 @@ export const PatientDashboard = () => {
                         {activeTab === 'profile' && (
                             <div className="space-y-6">
                                 <h2 className="text-2xl font-bold text-gray-900">My Profile</h2>
-                                <ProfileSettings />
+                                <PatientProfileForm onComplete={() => {}} />
                             </div>
                         )}
                     </div>

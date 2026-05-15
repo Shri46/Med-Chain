@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Navbar } from '../components/layout/Navbar';
 import { Footer } from '../components/layout/Footer';
 import { PatientSearch } from '../components/doctor/PatientSearch';
-import { AccessibleRecords } from '../components/doctor/AccessibleRecords';
+import { PatientProfileCard } from '../components/doctor/PatientProfileCard';
 import { AuditLog } from '../components/audit/AuditLog';
 import { ProfileSettings } from '../components/audit/ProfileSettings';
 import { Search, Activity, UserCircle } from 'lucide-react';
@@ -61,19 +61,14 @@ export const DoctorDashboard = () => {
                                 {searchedPatient && (
                                     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
                                         <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-lg font-medium text-gray-700">
-                                                Records for: <span className={getUserName(searchedPatient) ? "font-medium text-primary-700" : "font-mono text-primary-600"}>
-                                                    {getUserName(searchedPatient) ? `${getUserName(searchedPatient)} (${formatAddress(searchedPatient)})` : formatAddress(searchedPatient)}
-                                                </span>
-                                            </h3>
                                             <button
                                                 onClick={() => setSearchedPatient(null)}
-                                                className="text-sm text-gray-500 hover:text-gray-700"
+                                                className="text-sm font-medium text-primary-600 hover:text-primary-800 bg-primary-50 px-3 py-1 rounded-md"
                                             >
-                                                Clear Search
+                                                &larr; Back to Search
                                             </button>
                                         </div>
-                                        <AccessibleRecords patientAddress={searchedPatient} />
+                                        <PatientProfileCard patientAddress={searchedPatient} />
                                     </div>
                                 )}
                             </div>
